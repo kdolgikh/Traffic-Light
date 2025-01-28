@@ -8,4 +8,16 @@ The foundation of the traffic light state machine project is a basic four-way in
 
 ## Environment
 
+1. Build the image:
+
+```bash
+docker build -t traffic-ctrl:0.1.0 .
+```
+
+2. Run the container:
+
+```bash
+docker run -it --name ctr-traffic-ctrl --mount type=bind,src=/home/builder/github_repos/Traffic-Light,dst=/home/developer/Traffic-Light traffic-ctrl:0.1.0
+```
+
 ## Testing
