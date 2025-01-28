@@ -42,6 +42,58 @@
           "description": "Type of sensor"
         }
       }
+    },
+    "base_lane": {
+      "type": "object",
+      "required": [
+        "count"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of lanes"
+        }
+      }
+    },
+    "straight_lane": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/base_lane"
+        },
+        {
+          "properties": {
+            "detector": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/setback_detector"
+                },
+                {
+                  "$ref": "#/definitions/stop_line_detector"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "turn_lane": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/base_lane"
+        },
+        {
+          "properties": {
+            "protected": {
+              "type": "boolean",
+              "description": "Whether turn has protected phase"
+            },
+            "detector": {
+              "$ref": "#/definitions/stop_line_detector"
+            }
+          }
+        }
+      ]
     }
   },
   "required": [
@@ -67,7 +119,7 @@
     },
     "main_road": {
       "type": "string",
-      "description": "ID of the main road"
+      "description": "ID of the main road if any"
     },
     "roads": {
       "type": "array",
@@ -123,63 +175,13 @@
                   ],
                   "properties": {
                     "straight": {
-                      "type": "object",
-                      "required": [
-                        "count"
-                      ],
-                      "properties": {
-                        "count": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "description": "Number of straight lanes"
-                        },
-                        "detector": {
-                          "anyOf": [
-                            {
-                              "$ref": "#/definitions/setback_detector"
-                            },
-                            {
-                              "$ref": "#/definitions/stop_line_detector"
-                            }
-                          ]
-                        }
-                      }
+                      "$ref": "#/definitions/straight_lane"
                     },
                     "left": {
-                      "type": "object",
-                      "properties": {
-                        "count": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "description": "Number of left turn lanes"
-                        },
-                        "protected": {
-                          "type": "boolean",
-                          "description": "Whether left turn has protected phase"
-                        },
-                        "detector": {
-                          "$ref": "#/definitions/stop_line_detector"
-                        }
-                      },
-                      "required": [
-                        "count"
-                      ]
+                      "$ref": "#/definitions/turn_lane"
                     },
                     "right": {
-                      "type": "object",
-                      "properties": {
-                        "count": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "description": "Number of right turn lanes"
-                        },
-                        "detector": {
-                          "$ref": "#/definitions/stop_line_detector"
-                        }
-                      },
-                      "required": [
-                        "count"
-                      ]
+                      "$ref": "#/definitions/turn_lane"
                     }
                   }
                 },

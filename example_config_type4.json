@@ -1,0 +1,80 @@
+{
+  "intersection_id": "INT004",
+  "type": 4,
+  "roads": [
+    {
+      "id": "road1",
+      "name": "Main Street",
+      "speed_limit": 35,
+      "directions": [
+        {
+          "type": "EB",
+          "lanes": {
+            "straight": {
+              "count": 1
+            },
+            "left": {
+              "count": 1,
+              "protected": true
+            },
+            "right": {
+              "count": 1
+            }
+          }
+        },
+        {
+          "type": "WB",
+          "lanes": {
+            "straight": {
+              "count": 1
+            },
+            "left": {
+              "count": 1,
+              "protected": false
+            },
+            "right": {
+              "count": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "road2",
+      "name": "Cross Street",
+      "speed_limit": 35,
+      "directions": [
+        {
+          "type": "NB",
+          "lanes": {
+            "straight": {
+              "count": 1
+            },
+            "left": {
+              "count": 1,
+              "protected": false
+            },
+            "right": {
+              "count": 1
+            }
+          }
+        },
+        {
+          "type": "SB",
+          "lanes": {
+            "straight": {
+              "count": 1
+            },
+            "left": {
+              "count": 1,
+              "protected": false
+            },
+            "right": {
+              "count": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
