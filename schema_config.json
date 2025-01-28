@@ -3,6 +3,15 @@
   "type": "object",
   "title": "Traffic Light Controller Configuration",
   "definitions": {
+    "detector_type": {
+      "type": "string",
+      "enum": [
+        "loop",
+        "video",
+        "radar"
+      ],
+      "description": "Type of sensor"
+    },
     "setback_detector": {
       "type": "object",
       "required": [
@@ -11,13 +20,7 @@
       ],
       "properties": {
         "type": {
-          "type": "string",
-          "enum": [
-            "loop",
-            "video",
-            "radar"
-          ],
-          "description": "Type of sensor"
+          "$ref": "#/definitions/detector_type"
         },
         "distance": {
           "type": "integer",
@@ -33,13 +36,7 @@
       ],
       "properties": {
         "type": {
-          "type": "string",
-          "enum": [
-            "loop",
-            "video",
-            "radar"
-          ],
-          "description": "Type of sensor"
+          "$ref": "#/definitions/detector_type"
         }
       }
     },
@@ -119,7 +116,7 @@
     },
     "main_road": {
       "type": "string",
-      "description": "ID of the main road if any"
+      "description": "ID of the main road"
     },
     "roads": {
       "type": "array",
