@@ -1,0 +1,248 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Traffic Light Controller Configuration",
+  "definitions": {
+    "setback_detector": {
+      "type": "object",
+      "required": [
+        "type",
+        "distance"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "loop",
+            "video",
+            "radar"
+          ],
+          "description": "Type of sensor"
+        },
+        "distance": {
+          "type": "integer",
+          "minimum": 80,
+          "description": "Distance from stop line in feet, min 80ft for 30mph"
+        }
+      }
+    },
+    "stop_line_detector": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "loop",
+            "video",
+            "radar"
+          ],
+          "description": "Type of sensor"
+        }
+      }
+    }
+  },
+  "required": [
+    "intersection_id",
+    "type",
+    "roads",
+    "main_road"
+  ],
+  "properties": {
+    "intersection_id": {
+      "type": "string",
+      "description": "Unique identifier for the intersection"
+    },
+    "type": {
+      "type": "integer",
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "description": "Intersection type: 1-straight only, 2-with right turns, 3-with left turns, 4-with both turns"
+    },
+    "main_road": {
+      "type": "string",
+      "description": "ID of the main road"
+    },
+    "roads": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "directions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the road"
+          },
+          "name": {
+            "type": "string",
+            "description": "Road name"
+          },
+          "speed_limit": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 60,
+            "description": "Speed limit in mph"
+          },
+          "directions": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "lanes"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "NB",
+                    "SB",
+                    "EB",
+                    "WB"
+                  ],
+                  "description": "Direction type: NB-northbound, SB-southbound, EB-eastbound, WB-westbound"
+                },
+                "lanes": {
+                  "type": "object",
+                  "required": [
+                    "straight"
+                  ],
+                  "properties": {
+                    "straight": {
+                      "type": "object",
+                      "required": [
+                        "count"
+                      ],
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Number of straight lanes"
+                        },
+                        "detector": {
+                          "anyOf": [
+                            {
+                              "$ref": "#/definitions/setback_detector"
+                            },
+                            {
+                              "$ref": "#/definitions/stop_line_detector"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "left": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Number of left turn lanes"
+                        },
+                        "protected": {
+                          "type": "boolean",
+                          "description": "Whether left turn has protected phase"
+                        },
+                        "detector": {
+                          "$ref": "#/definitions/stop_line_detector"
+                        }
+                      },
+                      "required": [
+                        "count"
+                      ]
+                    },
+                    "right": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Number of right turn lanes"
+                        },
+                        "detector": {
+                          "$ref": "#/definitions/stop_line_detector"
+                        }
+                      },
+                      "required": [
+                        "count"
+                      ]
+                    }
+                  }
+                },
+                "pedestrian": {
+                  "type": "object",
+                  "properties": {
+                    "crossing": {
+                      "type": "boolean",
+                      "description": "Whether pedestrian crossing exists"
+                    },
+                    "push_button": {
+                      "type": "boolean",
+                      "description": "Whether push button exists"
+                    },
+                    "distance": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Crossing distance in feet"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "properties": {
+        "yellow_time": {
+          "type": "number",
+          "minimum": 3,
+          "maximum": 6,
+          "description": "Yellow light duration in seconds"
+        },
+        "red_clearance": {
+          "type": "number",
+          "minimum": 1.5,
+          "maximum": 3,
+          "description": "All-red clearance interval in seconds"
+        },
+        "min_green": {
+          "type": "number",
+          "minimum": 8,
+          "description": "Minimum green time in seconds"
+        },
+        "max_green": {
+          "type": "number",
+          "minimum": 15,
+          "description": "Maximum green time in seconds"
+        },
+        "pedestrian_walk": {
+          "type": "number",
+          "minimum": 4,
+          "description": "Walk signal duration in seconds"
+        },
+        "pedestrian_clearance": {
+          "type": "number",
+          "minimum": 4,
+          "description": "Pedestrian clearance (flashing don't walk) time in seconds"
+        }
+      }
+    }
+  }
+}
