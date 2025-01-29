@@ -23,11 +23,26 @@
     MAX(STRLEN(DIR_TYPE_NB), STRLEN(DIR_TYPE_SB)), \
     MAX(STRLEN(DIR_TYPE_EB), STRLEN(DIR_TYPE_WB)))
 
+typedef struct
+{
+    const char *const key;
+    const size_t key_size;
+    int value;
+} table_entry_t;
+
 static bool parse_detector(json_object *det_obj, detector_t *const det_ptr);
 static bool parse_lane_group(json_object *lane_obj, lane_group_t *const lane_ptr);
 static bool parse_ped_crossing(json_object *ped_cross_obj, ped_crossing_t *const ped_cross_ptr);
 static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr);
 static bool parse_road(json_object *road_obj, road_t *const road_ptr);
+static void str_to_upper(char *const str_ptr, size_t str_len);
+static bool str_to_enum_type(
+    const char *const param_str,
+    char *const str,
+    const size_t max_str_len,
+    int *const enum_ptr,
+    const table_entry_t *const table,
+    const size_t table_size);
 static bool str_to_direction_type(
     char *const dir_type_str,
     const size_t max_dir_type_str_len,
@@ -61,7 +76,7 @@ static bool parse_detector(json_object *det_obj, detector_t *const det_ptr)
             break;
         }
 
-        char *det_type = (char*)json_object_get_string(temp_obj);
+        char *det_type = (char *)json_object_get_string(temp_obj);
 
         if (!str_to_detector_type(det_type, MAX_DET_TYPE_STR_LEN, &det_ptr->type))
         {
@@ -205,7 +220,7 @@ static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr)
             break;
         }
 
-        char *dir_type = (char*)json_object_get_string(temp_obj);
+        char *dir_type = (char *)json_object_get_string(temp_obj);
 
         if (!str_to_direction_type(dir_type, MAX_DIR_TYPE_STR_LEN, &dir_ptr->type))
         {
@@ -344,19 +359,65 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
     return result;
 }
 
-typedef struct
-{
-    const char *const key;
-    const size_t key_size;
-    int value;
-} table_entry_t;
-
 static void str_to_upper(char *const str_ptr, size_t str_len)
 {
     for (size_t i = 0; i < str_len; i++)
     {
         str_ptr[i] = (char)toupper(str_ptr[i]);
     }
+}
+
+static bool str_to_enum_type(
+    const char *const param_str,
+    char *const str,
+    const size_t max_str_len,
+    int *const enum_ptr,
+    const table_entry_t *const table,
+    const size_t table_size)
+{
+    if (param_str == NULL ||
+        str == NULL ||
+        max_str_len == 0 ||
+        enum_ptr == NULL ||
+        table == NULL ||
+        table_size < sizeof(table_entry_t))
+    {
+        return false;
+    }
+
+    size_t str_len = strnlen(str, MAX_STR_LEN);
+
+    if (str_len > max_str_len)
+    {
+        fprintf(
+            stderr,
+            "Invalid %s type length of %lu, "
+            "must be not more than %lu characters\n",
+            param_str,
+            str_len,
+            max_str_len);
+
+        return false;
+    }
+
+    str_to_upper(str, str_len);
+
+    for (size_t i = 0; i < table_size; i++)
+    {
+        if (str_len != table[i].key_size)
+        {
+            continue;
+        }
+
+        if (strcmp(str, table[i].key) == 0)
+        {
+            *enum_ptr = table[i].value;
+            return true;
+        }
+    }
+
+    fprintf(stderr, "Unknown %s type: %s\n", param_str, str);
+    return false;
 }
 
 static bool str_to_direction_type(
@@ -371,41 +432,13 @@ static bool str_to_direction_type(
         {DIR_TYPE_WB, STRLEN(DIR_TYPE_WB), DIRECTION_WB}};
     static const size_t dir_types_size = sizeof(dir_types) / sizeof(table_entry_t);
 
-    if (dir_type_str != NULL && dir_type_ptr != NULL)
-    {
-        size_t dir_type_str_len = strnlen(dir_type_str, MAX_STR_LEN);
-
-        if (dir_type_str_len > max_dir_type_str_len)
-        {
-            fprintf(stderr,
-                    "Invalid direction type length of %lu, "
-                    "must be not more than %lu characters\n",
-                    dir_type_str_len,
-                    max_dir_type_str_len);
-
-            return false;
-        }
-
-        str_to_upper(dir_type_str, dir_type_str_len);
-
-        for (size_t i = 0; i < dir_types_size; i++)
-        {
-            if (dir_type_str_len != dir_types[i].key_size)
-            {
-                continue;
-            }
-
-            if (strcmp(dir_type_str, dir_types[i].key) == 0)
-            {
-                *dir_type_ptr = (direction_type_t)dir_types[i].value;
-                return true;
-            }
-        }
-
-        fprintf(stderr, "Unknown direction type %s\n", dir_type_str);
-    }
-
-    return false;
+    return str_to_enum_type(
+        "direction",
+        dir_type_str,
+        max_dir_type_str_len,
+        (int *const)dir_type_ptr,
+        dir_types,
+        dir_types_size);
 }
 
 static bool str_to_detector_type(
@@ -419,41 +452,13 @@ static bool str_to_detector_type(
         {DET_TYPE_RADAR, STRLEN(DET_TYPE_RADAR), DETECTOR_RADAR}};
     static const size_t det_types_size = sizeof(det_types) / sizeof(table_entry_t);
 
-    if (det_type_str != NULL && det_type_ptr != NULL)
-    {
-        size_t det_type_str_len = strnlen(det_type_str, MAX_STR_LEN);
-
-        if (det_type_str_len > max_det_type_str_len)
-        {
-            fprintf(stderr,
-                    "Invalid detector type length of %lu, "
-                    "must be not more than %lu characters\n",
-                    det_type_str_len,
-                    max_det_type_str_len);
-
-            return false;
-        }
-
-        str_to_upper(det_type_str, det_type_str_len);
-
-        for (size_t i = 0; i < det_types_size; i++)
-        {
-            if (det_type_str_len != det_types[i].key_size)
-            {
-                continue;
-            }
-
-            if (strcmp(det_type_str, det_types[i].key) == 0)
-            {
-                *det_type_ptr = (detector_type_t)det_types[i].value;
-                return true;
-            }
-        }
-
-        fprintf(stderr, "Unknown detector type %s\n", det_type_str);
-    }
-
-    return false;
+    return str_to_enum_type(
+        "detector",
+        det_type_str,
+        max_det_type_str_len,
+        (int *const)det_type_ptr,
+        det_types,
+        det_types_size);
 }
 
 bool load_config(config_t *config, const char *filename)
