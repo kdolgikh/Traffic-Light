@@ -28,7 +28,15 @@ typedef struct
     const char *const key;
     const size_t key_size;
     int value;
-} table_entry_t;
+} type_table_entry_t;
+
+typedef struct
+{
+    const uint8_t speed;
+    const uint16_t distance;
+} speed_table_entry_t;
+
+/* Config parameters parsing and validation function prototypes */
 
 static bool parse_detector(json_object *det_obj, detector_t *const det_ptr);
 static bool parse_lane_group(json_object *lane_obj, lane_group_t *const lane_ptr);
@@ -41,7 +49,7 @@ static bool str_to_enum_type(
     char *const str,
     const size_t max_str_len,
     int *const enum_ptr,
-    const table_entry_t *const table,
+    const type_table_entry_t *const table,
     const size_t table_size);
 static bool str_to_direction_type(
     char *const dir_type_str,
@@ -51,6 +59,26 @@ static bool str_to_detector_type(
     char *const det_type_str,
     const size_t max_det_type_str_len,
     detector_type_t *const det_type_ptr);
+
+/* Config validation function prototypes */
+
+static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left);
+static bool validate_detector_config(
+    const detector_t *const det_ptr,
+    const bool is_main_road,
+    const bool is_straight_lane,
+    const uint8_t speed_limit);
+static bool validate_direction_config(
+    const intersection_type_t type,
+    const direction_t *const dir_ptr,
+    const bool is_main_road,
+    const uint8_t speed_limit);
+static bool validate_road_config(
+    const intersection_type_t type,
+    const road_t *const road_ptr,
+    const bool is_main_road);
+
+/* Config parameters parsing and validation */
 
 static bool parse_detector(json_object *det_obj, detector_t *const det_ptr)
 {
@@ -404,7 +432,7 @@ static bool str_to_enum_type(
     char *const str,
     const size_t max_str_len,
     int *const enum_ptr,
-    const table_entry_t *const table,
+    const type_table_entry_t *const table,
     const size_t table_size)
 {
     if (param_str == NULL ||
@@ -412,7 +440,7 @@ static bool str_to_enum_type(
         max_str_len == 0 ||
         enum_ptr == NULL ||
         table == NULL ||
-        table_size < sizeof(table_entry_t))
+        table_size < sizeof(type_table_entry_t))
     {
         return false;
     }
@@ -457,12 +485,11 @@ static bool str_to_direction_type(
     const size_t max_dir_type_str_len,
     direction_type_t *const dir_type_ptr)
 {
-    static const table_entry_t dir_types[] = {
+    static const type_table_entry_t dir_types[] = {
         {DIR_TYPE_NB, STRLEN(DIR_TYPE_NB), DIRECTION_NB},
         {DIR_TYPE_SB, STRLEN(DIR_TYPE_SB), DIRECTION_SB},
         {DIR_TYPE_EB, STRLEN(DIR_TYPE_EB), DIRECTION_EB},
         {DIR_TYPE_WB, STRLEN(DIR_TYPE_WB), DIRECTION_WB}};
-    static const size_t dir_types_size = sizeof(dir_types) / sizeof(table_entry_t);
 
     return str_to_enum_type(
         "direction",
@@ -470,7 +497,7 @@ static bool str_to_direction_type(
         max_dir_type_str_len,
         (int *const)dir_type_ptr,
         dir_types,
-        dir_types_size);
+        sizeof(dir_types) / sizeof(type_table_entry_t));
 }
 
 static bool str_to_detector_type(
@@ -478,11 +505,10 @@ static bool str_to_detector_type(
     const size_t max_det_type_str_len,
     detector_type_t *const det_type_ptr)
 {
-    static const table_entry_t det_types[] = {
+    static const type_table_entry_t det_types[] = {
         {DET_TYPE_LOOP, STRLEN(DET_TYPE_LOOP), DETECTOR_LOOP},
         {DET_TYPE_VIDEO, STRLEN(DET_TYPE_VIDEO), DETECTOR_VIDEO},
         {DET_TYPE_RADAR, STRLEN(DET_TYPE_RADAR), DETECTOR_RADAR}};
-    static const size_t det_types_size = sizeof(det_types) / sizeof(table_entry_t);
 
     return str_to_enum_type(
         "detector",
@@ -490,7 +516,246 @@ static bool str_to_detector_type(
         max_det_type_str_len,
         (int *const)det_type_ptr,
         det_types,
-        det_types_size);
+        sizeof(det_types) / sizeof(type_table_entry_t));
+}
+
+/* Config Validation */
+
+static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left)
+{
+    bool result;
+
+    switch (type)
+    {
+    case INTERSECTION_TYPE_1: // straight only
+        result = false;
+        break;
+    case INTERSECTION_TYPE_2: // straight + right
+        result = !is_left;    // only right turns allowed
+        break;
+    case INTERSECTION_TYPE_3: // straight + left
+        result = is_left;     // only left turns allowed
+        break;
+    case INTERSECTION_TYPE_4: // straight + left + right
+        result = true;        // all turns allowed
+        break;
+    default:
+        fprintf(stderr, "Unknown intersection type: %d\n", type);
+        result = false;
+        break;
+    }
+
+    return result;
+}
+
+static bool validate_detector_config(
+    const detector_t *const det_ptr,
+    const bool is_main_road,
+    const bool is_straight_lane,
+    const uint8_t speed_limit)
+{
+    bool result = false;
+
+    do
+    {
+        if (det_ptr == NULL)
+        {
+            fprintf(stderr, "Assertion error in validate_detector_config\n");
+            break;
+        }
+
+        if (is_main_road)
+        {
+            if (det_ptr->distance == 0)
+            {
+                fprintf(stderr, "Main road cannot have a stop line detector\n");
+                break;
+            }
+
+            if (is_straight_lane)
+            {
+                // Check if distance is appropriate for the detector type
+                if (det_ptr->type == DETECTOR_LOOP)
+                {
+                    static const speed_table_entry_t loop_distances[] = {
+                        {30U, 80U},
+                        {35U, 200U},
+                        {40U, 300U},
+                        {45U, 330U},
+                        {50U, 370U},
+                        {55U, 445U},
+                        {60U, 485U}};
+
+                    size_t i;
+                    for (i = 0; i < sizeof(loop_distances) / sizeof(speed_table_entry_t); i++)
+                    {
+                        if (speed_limit == loop_distances[i].speed)
+                        {
+                            if (det_ptr->distance != loop_distances[i].distance)
+                            {
+                                fprintf(stderr,
+                                        "Invalid setback detector distance %u for speed limit %u, "
+                                        "must be %u feet\n",
+                                        det_ptr->distance,
+                                        speed_limit,
+                                        loop_distances[i].distance);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (i == sizeof(loop_distances) / sizeof(speed_table_entry_t))
+                    {
+                        fprintf(stderr,
+                                "Invalid speed limit %u for setback detector on main road, "
+                                "must be one of the following: 30, 35, 40, 45, 50, 55, 60 mph\n",
+                                speed_limit);
+                        break;
+                    }
+                }
+
+                // TODO: Add more checks for other detector types if necessary
+            }
+            else if (det_ptr->distance > 0)
+            {
+                fprintf(stderr, "Main road cannot have a setback detector on a turn lane\n");
+                break;
+            }
+        }
+        else if (det_ptr->distance > 0)
+        {
+            fprintf(stderr, "Non-main roads cannot have a setback detector\n");
+            break;
+        }
+
+        result = true;
+
+    } while (0);
+
+    return result;
+}
+
+static bool validate_direction_config(
+    const intersection_type_t type,
+    const direction_t *const dir_ptr,
+    const bool is_main_road,
+    const uint8_t speed_limit)
+{
+    bool result = false;
+
+    do
+    {
+        if (dir_ptr == NULL)
+        {
+            fprintf(stderr, "Assertion error in validate_direction_config\n");
+            break;
+        }
+
+        // Validate all lanes
+
+        if (dir_ptr->straight.has_detector)
+        {
+            if (!validate_detector_config(
+                    &dir_ptr->straight.detector,
+                    is_main_road,
+                    true,
+                    speed_limit))
+            {
+                fprintf(stderr, "Invalid straight lane detector configuration\n");
+                break;
+            }
+        }
+
+        if (dir_ptr->has_left)
+        {
+            if (!is_turn_lane_allowed(type, true))
+            {
+                fprintf(stderr, "Left turn lane not allowed for intersection type %d\n", type);
+                break;
+            }
+
+            if (dir_ptr->left.has_detector)
+            {
+                if (!validate_detector_config(
+                        &dir_ptr->left.detector,
+                        is_main_road,
+                        false,
+                        speed_limit))
+                {
+                    fprintf(stderr, "Invalid left turn lane detector configuration\n");
+                    break;
+                }
+            }
+        }
+
+        if (dir_ptr->has_right)
+        {
+            if (!is_turn_lane_allowed(type, false))
+            {
+                fprintf(stderr, "Right turn lane not allowed for intersection type %d\n", type);
+                break;
+            }
+
+            if (dir_ptr->right.has_detector)
+            {
+                if (!validate_detector_config(
+                        &dir_ptr->right.detector,
+                        is_main_road,
+                        false,
+                        speed_limit))
+                {
+                    fprintf(stderr, "Invalid right turn lane detector configuration\n");
+                    break;
+                }
+            }
+        }
+
+        result = true;
+
+    } while (0);
+
+    return result;
+}
+
+static bool validate_road_config(
+    const intersection_type_t type,
+    const road_t *const road_ptr,
+    const bool is_main_road)
+{
+    bool result = false;
+
+    do
+    {
+        if (road_ptr == NULL)
+        {
+            fprintf(stderr, "Assertion error in validate_road_config\n");
+            break;
+        }
+
+        size_t i;
+        for (i = 0; i < MAX_DIRECTIONS; i++)
+        {
+            if (!validate_direction_config(
+                    type,
+                    &road_ptr->directions[i],
+                    is_main_road,
+                    road_ptr->speed_limit))
+            {
+                break;
+            }
+        }
+
+        if (i != MAX_DIRECTIONS)
+        {
+            fprintf(stderr, "Invalid configuration for direction %lu\n", i);
+            break;
+        }
+
+        result = true;
+
+    } while (0);
+
+    return result;
 }
 
 /*Interface Functions*/
@@ -607,14 +872,42 @@ bool config_load(config_t *config, const char *filename)
 
 bool config_validate(const config_t *const cfg_ptr)
 {
-    if (cfg_ptr == NULL)
-    {
-        fprintf(stderr, "Assertion error in validate_config\n");
-        return false;
-    }
+    bool result = false;
 
     // TODO:
-    // - check config logic
+    // - check that road names are not same
 
-    return true;
+    do
+    {
+        if (cfg_ptr == NULL)
+        {
+            fprintf(stderr, "Assertion error in validate_config\n");
+            break;
+        }
+
+        size_t i;
+        for (i = 0; i < MAX_ROADS; i++)
+        {
+            bool is_main_road = (cfg_ptr->main_road == &cfg_ptr->roads[i]);
+
+            if (!validate_road_config(
+                    cfg_ptr->intersect_type,
+                    &cfg_ptr->roads[i],
+                    is_main_road))
+            {
+                break;
+            }
+        }
+
+        if (i != MAX_ROADS)
+        {
+            fprintf(stderr, "Invalid configuration for road %lu\n", i);
+            break;
+        }
+
+        result = true;
+
+    } while (0);
+
+    return result;
 }

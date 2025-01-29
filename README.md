@@ -4,8 +4,7 @@ Traffic light state machine
 
 ## Assumptions
 
-- Speed limit one a road is the same in both directions.
-- If there is a vehicle detector, it is installed on every lane of the direction.
+- Speed limit on a road is the same in both directions.
 
 ## Environment
 
@@ -22,8 +21,3 @@ Traffic light state machine
     ```
 
 ## Testing
-
-## Misc
-
-If detector is not NONE:
-    if distance is less than 80 this is a stop line detector, otherwise setback detector
