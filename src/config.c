@@ -533,7 +533,6 @@ static bool str_to_detector_type(
 // TODO:
 // - Add validation of pedestrian crossing time vs distance
 // - Add validation of protected phase for left turn lanes
-// - Add validation of each direction on an intersection (NB, SB, EB, WB)
 
 static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left)
 {
@@ -567,7 +566,7 @@ static bool is_valid_directions_pair(const direction_t directions[MAX_DIRECTIONS
     static const direction_pair_t valid_pairs[] = {
         {DIRECTION_NB, DIRECTION_SB},
         {DIRECTION_EB, DIRECTION_WB},
-        // Add more valid pairs here, e.g.:
+        // Add more valid pairs here if necessary, e.g.:
         // {DIRECTION_NE, DIRECTION_SW},
         // {DIRECTION_NW, DIRECTION_SE},
     };
@@ -655,7 +654,7 @@ static bool validate_detector_config(
                     }
                 }
 
-                // TODO: Add more checks for other detector types if necessary
+                // Add more checks for other detector types if necessary
             }
             else
             {
