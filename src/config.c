@@ -7,7 +7,6 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define STRLEN(s) (sizeof(s) - 1U)
 
-#define COPY_SIZE (MAX_STR_LEN - 1U) // Leave space for the terminating null character
 #define DET_TYPE_LOOP "LOOP"
 #define DET_TYPE_VIDEO "VIDEO"
 #define DET_TYPE_RADAR "RADAR"
@@ -359,7 +358,7 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
             break;
         }
 
-        strncpy(road_ptr->id, json_object_get_string(temp_obj), COPY_SIZE);
+        snprintf(road_ptr->id, MAX_STR_LEN, "%s", json_object_get_string(temp_obj));
 
         // Parse road name (required)
         if (!json_object_object_get_ex(road_obj, "name", &temp_obj))
@@ -368,7 +367,7 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
             break;
         }
 
-        strncpy(road_ptr->name, json_object_get_string(temp_obj), COPY_SIZE);
+        snprintf(road_ptr->name, MAX_STR_LEN, "%s", json_object_get_string(temp_obj));
 
         // Parse speed limit (required)
         if (!json_object_object_get_ex(road_obj, "speed_limit", &temp_obj))
@@ -472,7 +471,7 @@ static bool str_to_enum_type(
             continue;
         }
 
-        if (strcmp(str, table[i].type_str) == 0)
+        if (strncmp(str, table[i].type_str, MAX_STR_LEN) == 0)
         {
             *enum_ptr = table[i].type_enum_value;
             return true;
@@ -796,7 +795,7 @@ bool config_load(config_t *config, const char *filename)
             break;
         }
 
-        strncpy(config->id, json_object_get_string(temp_obj), COPY_SIZE);
+        snprintf(config->id, MAX_STR_LEN, "%s", json_object_get_string(temp_obj));
 
         // Parse intersection type (required)
         if (!json_object_object_get_ex(root, "type", &temp_obj))
@@ -846,7 +845,8 @@ bool config_load(config_t *config, const char *filename)
             }
 
             // Set main road pointer if this is the main road
-            if (main_road_id != NULL && strcmp(config->roads[i].id, main_road_id) == 0)
+            if (main_road_id != NULL &&
+                strncmp(config->roads[i].id, main_road_id, MAX_STR_LEN) == 0)
             {
                 config->main_road = &config->roads[i];
             }
@@ -880,20 +880,37 @@ bool config_validate(const config_t *const cfg_ptr)
 {
     bool result = false;
 
-    // TODO:
-    // - check that road names are not same
-
     do
     {
         if (cfg_ptr == NULL)
         {
-            fprintf(stderr, "Assertion error in validate_config\n");
+            fprintf(stderr, "Assertion error in config_validate\n");
             break;
         }
 
+        char seen_names[MAX_ROADS][MAX_STR_LEN] = {0};
         size_t i;
         for (i = 0; i < MAX_ROADS; i++)
         {
+            // Check for duplicate road names
+            for (size_t j = 0; j < i; j++)
+            {
+                if (strncmp(
+                        cfg_ptr->roads[i].name,
+                        seen_names[j],
+                        MAX_STR_LEN) == 0)
+                {
+                    fprintf(
+                        stderr,
+                        "Duplicate road name found: %s\n",
+                        cfg_ptr->roads[i].name);
+
+                    break;
+                }
+            }
+
+            snprintf(seen_names[i], MAX_STR_LEN, "%s", cfg_ptr->roads[i].name);
+
             bool is_main_road = (cfg_ptr->main_road == &cfg_ptr->roads[i]);
 
             if (!validate_road_config(
@@ -901,13 +918,13 @@ bool config_validate(const config_t *const cfg_ptr)
                     &cfg_ptr->roads[i],
                     is_main_road))
             {
+                fprintf(stderr, "Invalid configuration for road %lu\n", i);
                 break;
             }
         }
 
         if (i != MAX_ROADS)
         {
-            fprintf(stderr, "Invalid configuration for road %lu\n", i);
             break;
         }
 
