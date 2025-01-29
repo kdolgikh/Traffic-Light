@@ -24,16 +24,22 @@
 
 typedef struct
 {
-    const char *const type_str;
-    const size_t type_str_len;
-    int type_enum_value;
-} type_table_entry_t;
+    direction_type_t dir1;
+    direction_type_t dir2;
+} direction_pair_t;
 
 typedef struct
 {
     const uint8_t speed;
     const uint16_t distance;
 } speed_table_entry_t;
+
+typedef struct
+{
+    const char *const type_str;
+    const size_t type_str_len;
+    int type_enum_value;
+} type_table_entry_t;
 
 /* Config parameters parsing and validation function prototypes */
 
@@ -62,6 +68,7 @@ static bool str_to_detector_type(
 /* Config validation function prototypes */
 
 static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left);
+static bool is_valid_directions_pair(const direction_t directions[MAX_DIRECTIONS]);
 static bool validate_detector_config(
     const detector_t *const det_ptr,
     const bool is_main_road,
@@ -555,6 +562,33 @@ static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_l
     return result;
 }
 
+static bool is_valid_directions_pair(const direction_t directions[MAX_DIRECTIONS])
+{
+    static const direction_pair_t valid_pairs[] = {
+        {DIRECTION_NB, DIRECTION_SB},
+        {DIRECTION_EB, DIRECTION_WB},
+        // Add more valid pairs here, e.g.:
+        // {DIRECTION_NE, DIRECTION_SW},
+        // {DIRECTION_NW, DIRECTION_SE},
+    };
+
+    for (size_t i = 0; i < sizeof(valid_pairs) / sizeof(direction_pair_t); i++)
+    {
+        if ((directions[0].type == valid_pairs[i].dir1 &&
+             directions[1].type == valid_pairs[i].dir2) ||
+            (directions[0].type == valid_pairs[i].dir2 &&
+             directions[1].type == valid_pairs[i].dir1))
+        {
+            return true;
+        }
+    }
+
+    fprintf(stderr, "Invalid direction combination: %d and %d\n",
+            directions[0].type, directions[1].type);
+
+    return false;
+}
+
 static bool validate_detector_config(
     const detector_t *const det_ptr,
     const bool is_main_road,
@@ -888,28 +922,63 @@ bool config_validate(const config_t *const cfg_ptr)
             break;
         }
 
+        bool found_duplicate = false;
         char seen_names[MAX_ROADS][MAX_STR_LEN] = {0};
+        direction_pair_t seen_dir_pairs[MAX_ROADS] = {0};
         size_t i;
         for (i = 0; i < MAX_ROADS; i++)
         {
-            // Check for duplicate road names
+            // Check for duplicate road names and direction pairs
             for (size_t j = 0; j < i; j++)
             {
                 if (strncmp(
-                        cfg_ptr->roads[i].name,
                         seen_names[j],
+                        cfg_ptr->roads[i].name,
                         MAX_STR_LEN) == 0)
                 {
                     fprintf(
                         stderr,
                         "Duplicate road name found: %s\n",
                         cfg_ptr->roads[i].name);
+                    found_duplicate = true;
+                    break;
+                }
 
+                if ((seen_dir_pairs[j].dir1 == cfg_ptr->roads[i].directions[0].type &&
+                     seen_dir_pairs[j].dir2 == cfg_ptr->roads[i].directions[1].type) ||
+                    (seen_dir_pairs[j].dir2 == cfg_ptr->roads[i].directions[0].type &&
+                     seen_dir_pairs[j].dir1 == cfg_ptr->roads[i].directions[1].type))
+                {
+                    fprintf(
+                        stderr,
+                        "Duplicate direction pair found for road %s\n",
+                        cfg_ptr->roads[i].name);
+                    found_duplicate = true;
                     break;
                 }
             }
 
+            if (found_duplicate)
+            {
+                break;
+            }
+
             snprintf(seen_names[i], MAX_STR_LEN, "%s", cfg_ptr->roads[i].name);
+
+            if (is_valid_directions_pair(cfg_ptr->roads[i].directions))
+            {
+                seen_dir_pairs[i].dir1 = cfg_ptr->roads[i].directions[0].type;
+                seen_dir_pairs[i].dir2 = cfg_ptr->roads[i].directions[1].type;
+            }
+            else
+            {
+                fprintf(
+                    stderr,
+                    "Invalid direction combination for road %s\n",
+                    cfg_ptr->roads[i].name);
+
+                break;
+            }
 
             bool is_main_road = (cfg_ptr->main_road == &cfg_ptr->roads[i]);
 
