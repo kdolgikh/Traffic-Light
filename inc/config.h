@@ -93,6 +93,7 @@ typedef struct
     road_t *main_road;
 } config_t;
 
-bool load_config(config_t *config, const char *filename);
+bool config_load(config_t *config, const char *filename);
+bool config_validate(const config_t *const cfg_ptr);
 
 #endif // CONFIG_H

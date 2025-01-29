@@ -14,9 +14,15 @@ int main(int argc, char *argv[])
     static config_t config;
     memset(&config, 0, sizeof(config));
 
-    if (!load_config(&config, argv[1]))
+    if (!config_load(&config, argv[1]))
     {
         fprintf(stderr, "Failed to load configuration\n");
+        return EXIT_FAILURE;
+    }
+
+    if (!config_validate(&config))
+    {
+        fprintf(stderr, "Invalid configuration\n");
         return EXIT_FAILURE;
     }
 

@@ -52,9 +52,6 @@ static bool str_to_detector_type(
     const size_t max_det_type_str_len,
     detector_type_t *const det_type_ptr);
 
-// TODO:
-// - check required and optional parameters logic
-
 static bool parse_detector(json_object *det_obj, detector_t *const det_ptr)
 {
     bool result = false;
@@ -498,7 +495,7 @@ static bool str_to_detector_type(
 
 /*Interface Functions*/
 
-bool load_config(config_t *config, const char *filename)
+bool config_load(config_t *config, const char *filename)
 {
     bool status = false;
     json_object *root = NULL;
@@ -606,4 +603,18 @@ bool load_config(config_t *config, const char *filename)
     }
 
     return status;
+}
+
+bool config_validate(const config_t *const cfg_ptr)
+{
+    if (cfg_ptr == NULL)
+    {
+        fprintf(stderr, "Assertion error in validate_config\n");
+        return false;
+    }
+
+    // TODO:
+    // - check config logic
+
+    return true;
 }
