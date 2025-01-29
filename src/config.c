@@ -2,16 +2,40 @@
 #include <json-c/json.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define STRLEN(s) (sizeof(s) - 1U)
 
 #define COPY_SIZE (MAX_STR_LEN - 1U) // Leave space for the terminating null character
+#define DET_TYPE_LOOP "LOOP"
+#define DET_TYPE_VIDEO "VIDEO"
+#define DET_TYPE_RADAR "RADAR"
+#define MAX_DET_TYPE_STR_LEN MAX(                       \
+    MAX(STRLEN(DET_TYPE_LOOP), STRLEN(DET_TYPE_VIDEO)), \
+    STRLEN(DET_TYPE_RADAR))
+
+#define DIR_TYPE_NB "NB"
+#define DIR_TYPE_SB "SB"
+#define DIR_TYPE_EB "EB"
+#define DIR_TYPE_WB "WB"
+#define MAX_DIR_TYPE_STR_LEN MAX(                  \
+    MAX(STRLEN(DIR_TYPE_NB), STRLEN(DIR_TYPE_SB)), \
+    MAX(STRLEN(DIR_TYPE_EB), STRLEN(DIR_TYPE_WB)))
 
 static bool parse_detector(json_object *det_obj, detector_t *const det_ptr);
 static bool parse_lane_group(json_object *lane_obj, lane_group_t *const lane_ptr);
 static bool parse_ped_crossing(json_object *ped_cross_obj, ped_crossing_t *const ped_cross_ptr);
 static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr);
 static bool parse_road(json_object *road_obj, road_t *const road_ptr);
-static bool str_to_direction_type(const char *dir_type_str, direction_type_t *const dir_type_ptr);
-static bool str_to_detector_type(const char *det_type_str, detector_type_t *const det_type_ptr);
+static bool str_to_direction_type(
+    char *const dir_type_str,
+    const size_t max_dir_type_str_len,
+    direction_type_t *const dir_type_ptr);
+static bool str_to_detector_type(
+    char *const det_type_str,
+    const size_t max_det_type_str_len,
+    detector_type_t *const det_type_ptr);
 
 // TODO:
 // - add missing config validations
@@ -37,7 +61,9 @@ static bool parse_detector(json_object *det_obj, detector_t *const det_ptr)
             break;
         }
 
-        if (!str_to_detector_type(json_object_get_string(temp_obj), &det_ptr->type))
+        char *det_type = (char*)json_object_get_string(temp_obj);
+
+        if (!str_to_detector_type(det_type, MAX_DET_TYPE_STR_LEN, &det_ptr->type))
         {
             break;
         }
@@ -179,7 +205,9 @@ static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr)
             break;
         }
 
-        if (!str_to_direction_type(json_object_get_string(temp_obj), &dir_ptr->type))
+        char *dir_type = (char*)json_object_get_string(temp_obj);
+
+        if (!str_to_direction_type(dir_type, MAX_DIR_TYPE_STR_LEN, &dir_ptr->type))
         {
             break;
         }
@@ -318,23 +346,55 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
 
 typedef struct
 {
-    const char *key;
+    const char *const key;
+    const size_t key_size;
     int value;
 } table_entry_t;
 
-static bool str_to_direction_type(const char *dir_type_str, direction_type_t *const dir_type_ptr)
+static void str_to_upper(char *const str_ptr, size_t str_len)
+{
+    for (size_t i = 0; i < str_len; i++)
+    {
+        str_ptr[i] = (char)toupper(str_ptr[i]);
+    }
+}
+
+static bool str_to_direction_type(
+    char *const dir_type_str,
+    const size_t max_dir_type_str_len,
+    direction_type_t *const dir_type_ptr)
 {
     static const table_entry_t dir_types[] = {
-        {"NB", DIRECTION_NB},
-        {"SB", DIRECTION_SB},
-        {"EB", DIRECTION_EB},
-        {"WB", DIRECTION_WB}};
-    static const size_t dir_types_size = sizeof(dir_types) / sizeof(dir_types[0]);
+        {DIR_TYPE_NB, STRLEN(DIR_TYPE_NB), DIRECTION_NB},
+        {DIR_TYPE_SB, STRLEN(DIR_TYPE_SB), DIRECTION_SB},
+        {DIR_TYPE_EB, STRLEN(DIR_TYPE_EB), DIRECTION_EB},
+        {DIR_TYPE_WB, STRLEN(DIR_TYPE_WB), DIRECTION_WB}};
+    static const size_t dir_types_size = sizeof(dir_types) / sizeof(table_entry_t);
 
     if (dir_type_str != NULL && dir_type_ptr != NULL)
     {
+        size_t dir_type_str_len = strnlen(dir_type_str, MAX_STR_LEN);
+
+        if (dir_type_str_len > max_dir_type_str_len)
+        {
+            fprintf(stderr,
+                    "Invalid direction type length of %lu, "
+                    "must be not more than %lu characters\n",
+                    dir_type_str_len,
+                    max_dir_type_str_len);
+
+            return false;
+        }
+
+        str_to_upper(dir_type_str, dir_type_str_len);
+
         for (size_t i = 0; i < dir_types_size; i++)
         {
+            if (dir_type_str_len != dir_types[i].key_size)
+            {
+                continue;
+            }
+
             if (strcmp(dir_type_str, dir_types[i].key) == 0)
             {
                 *dir_type_ptr = (direction_type_t)dir_types[i].value;
@@ -348,18 +408,41 @@ static bool str_to_direction_type(const char *dir_type_str, direction_type_t *co
     return false;
 }
 
-static bool str_to_detector_type(const char *det_type_str, detector_type_t *const det_type_ptr)
+static bool str_to_detector_type(
+    char *const det_type_str,
+    const size_t max_det_type_str_len,
+    detector_type_t *const det_type_ptr)
 {
     static const table_entry_t det_types[] = {
-        {"LOOP", DETECTOR_LOOP},
-        {"VIDEO", DETECTOR_VIDEO},
-        {"RADAR", DETECTOR_RADAR}};
-    static const size_t det_types_size = sizeof(det_types) / sizeof(det_types[0]);
+        {DET_TYPE_LOOP, STRLEN(DET_TYPE_LOOP), DETECTOR_LOOP},
+        {DET_TYPE_VIDEO, STRLEN(DET_TYPE_VIDEO), DETECTOR_VIDEO},
+        {DET_TYPE_RADAR, STRLEN(DET_TYPE_RADAR), DETECTOR_RADAR}};
+    static const size_t det_types_size = sizeof(det_types) / sizeof(table_entry_t);
 
     if (det_type_str != NULL && det_type_ptr != NULL)
     {
+        size_t det_type_str_len = strnlen(det_type_str, MAX_STR_LEN);
+
+        if (det_type_str_len > max_det_type_str_len)
+        {
+            fprintf(stderr,
+                    "Invalid detector type length of %lu, "
+                    "must be not more than %lu characters\n",
+                    det_type_str_len,
+                    max_det_type_str_len);
+
+            return false;
+        }
+
+        str_to_upper(det_type_str, det_type_str_len);
+
         for (size_t i = 0; i < det_types_size; i++)
         {
+            if (det_type_str_len != det_types[i].key_size)
+            {
+                continue;
+            }
+
             if (strcmp(det_type_str, det_types[i].key) == 0)
             {
                 *det_type_ptr = (detector_type_t)det_types[i].value;
