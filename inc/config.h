@@ -62,13 +62,13 @@ typedef struct
 typedef struct
 {
     direction_type_t type;
-    lane_group_t straight;
-    bool has_left;      // Whether left turn exists
-    bool has_right;     // Whether right turn exists
-    bool has_crossing;  // Whether crossing exists
-    lane_group_t left;  // Optional left turn lanes
-    lane_group_t right; // Optional right turn lanes
-    ped_crossing_t ped; // Optional pedestrian crossing configuration
+    bool has_left;            // Whether left turn exists
+    bool has_right;           // Whether right turn exists
+    bool has_ped_crossing;    // Whether crossing exists
+    lane_group_t straight;    // Required straight lanes
+    lane_group_t left;        // Optional left turn lanes
+    lane_group_t right;       // Optional right turn lanes
+    ped_crossing_t ped_cross; // Optional pedestrian crossing configuration
 } direction_t;
 
 #define ASSET_ID                \

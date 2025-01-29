@@ -320,9 +320,9 @@ static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr)
         // Parse pedestrian crossing (optional)
         if (json_object_object_get_ex(dir_obj, "pedestrian", &temp_obj))
         {
-            if (parse_ped_crossing(temp_obj, &dir_ptr->ped))
+            if (parse_ped_crossing(temp_obj, &dir_ptr->ped_cross))
             {
-                dir_ptr->has_crossing = true;
+                dir_ptr->has_ped_crossing = true;
             }
             else
             {
@@ -370,11 +370,14 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
 
         strncpy(road_ptr->name, json_object_get_string(temp_obj), COPY_SIZE);
 
-        // Parse speed limit (optional)
-        if (json_object_object_get_ex(road_obj, "speed_limit", &temp_obj))
+        // Parse speed limit (required)
+        if (!json_object_object_get_ex(road_obj, "speed_limit", &temp_obj))
         {
-            road_ptr->speed_limit = json_object_get_int(temp_obj);
+            fprintf(stderr, "Missing speed limit\n");
+            break;
         }
+
+        road_ptr->speed_limit = json_object_get_int(temp_obj);
 
         if (road_ptr->speed_limit < MIN_SPEED_LIMIT ||
             road_ptr->speed_limit > MAX_SPEED_LIMIT)
@@ -521,6 +524,11 @@ static bool str_to_detector_type(
 
 /* Config Validation */
 
+// TODO:
+// - Add validation of pedestrian crossing time vs distance
+// - Add validation of protected phase for left turn lanes
+// - Add validation of each direction on an intersection (NB, SB, EB, WB)
+
 static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left)
 {
     bool result;
@@ -650,8 +658,6 @@ static bool validate_direction_config(
             fprintf(stderr, "Assertion error in validate_direction_config\n");
             break;
         }
-
-        // Validate all lanes
 
         if (dir_ptr->straight.has_detector)
         {

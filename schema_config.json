@@ -127,6 +127,7 @@
         "required": [
           "id",
           "name",
+          "speed_limit",
           "directions"
         ],
         "properties": {
