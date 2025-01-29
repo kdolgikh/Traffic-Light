@@ -25,9 +25,9 @@
 
 typedef struct
 {
-    const char *const key;
-    const size_t key_size;
-    int value;
+    const char *const type_str;
+    const size_t type_str_len;
+    int type_enum_value;
 } type_table_entry_t;
 
 typedef struct
@@ -464,14 +464,14 @@ static bool str_to_enum_type(
 
     for (size_t i = 0; i < table_size; i++)
     {
-        if (str_len != table[i].key_size)
+        if (str_len != table[i].type_str_len)
         {
             continue;
         }
 
-        if (strcmp(str, table[i].key) == 0)
+        if (strcmp(str, table[i].type_str) == 0)
         {
-            *enum_ptr = table[i].value;
+            *enum_ptr = table[i].type_enum_value;
             return true;
         }
     }
