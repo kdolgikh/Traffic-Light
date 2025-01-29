@@ -1,6 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2
 DEBUG_FLAGS = -g -DDEBUG
+LDFLAGS = -ljson-c
 
 TARGET = traffic_controller
 SRC_DIR = src
@@ -15,7 +16,7 @@ all: $(BUILD_DIR)/$(TARGET)
 
 $(BUILD_DIR)/$(TARGET): $(OBJS)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(OBJS) -o $@
+	$(CC) $(OBJS) $(LDFLAGS) -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(BUILD_DIR)

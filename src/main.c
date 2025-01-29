@@ -1,8 +1,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-static config_t config;
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
@@ -11,6 +10,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Usage: %s <config_file_path>\n", argv[0]);
         return EXIT_FAILURE;
     }
+
+    static config_t config;
+    memset(&config, 0, sizeof(config));
 
     if (!load_config(&config, argv[1]))
     {

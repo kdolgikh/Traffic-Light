@@ -4,10 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MAX_STR_LEN 64
-#define MAX_ROADS 2      // Exactly 2 intersecting roads
-#define MAX_DIRECTIONS 2 // Each road has exactly 2 directions
-#define MAX_LANES 3      // Maximum lanes per direction
+#define MAX_STR_LEN 64U
+#define MAX_ROADS 2U              // Exactly 2 intersecting roads
+#define MAX_DIRECTIONS 2U         // Each road has exactly 2 directions
+#define MAX_LANES 3U              // Maximum lanes per direction
+#define MIN_DETECTOR_DISTANCE 80U // Minimum distance for setback detectors
 
 typedef enum
 {
@@ -41,46 +42,50 @@ typedef struct
 
 typedef struct
 {
-    int count;           // Number of lanes
+    uint8_t count;       // Number of lanes
     bool is_protected;   // For left turn lanes - whether they have protected phase
+    bool has_detector;   // Whether detector is installed
     detector_t detector; // Optional detector configuration
 } lane_group_t;
 
 typedef struct
 {
-    bool has_crossing; // Whether crossing exists
-    bool push_button;  // Whether push button exists
-    uint8_t distance;  // Crossing distance in feet
+    bool push_button; // Whether push button exists
+    uint8_t distance; // Crossing distance in feet
 } ped_crossing_t;
 
 typedef struct
 {
     direction_type_t type;
     lane_group_t straight;
+    bool has_left;      // Whether left turn exists
+    bool has_right;     // Whether right turn exists
+    bool has_crossing;  // Whether crossing exists
     lane_group_t left;  // Optional left turn lanes
     lane_group_t right; // Optional right turn lanes
     ped_crossing_t ped; // Optional pedestrian crossing configuration
 } direction_t;
 
-typedef struct
-{
-    char id[MAX_STR_LEN];
-    char name[MAX_STR_LEN];
-} asset_id_t;
+#define ASSET_ID                \
+    struct                      \
+    {                           \
+        char id[MAX_STR_LEN];   \
+        char name[MAX_STR_LEN]; \
+    }
 
 typedef struct
 {
-    asset_id_t id;
+    ASSET_ID;
     uint8_t speed_limit;
     direction_t directions[MAX_DIRECTIONS];
 } road_t;
 
 typedef struct
 {
-    asset_id_t id;
-    intersection_type_t type;
+    ASSET_ID;
+    intersection_type_t intersect_type;
     road_t roads[MAX_ROADS];
-    road_t *const main_road;
+    road_t *main_road;
 } config_t;
 
 bool load_config(config_t *config, const char *filename);
