@@ -53,7 +53,6 @@ static bool str_to_detector_type(
     detector_type_t *const det_type_ptr);
 
 // TODO:
-// - add missing config validations
 // - check required and optional parameters logic
 
 static bool parse_detector(json_object *det_obj, detector_t *const det_ptr)
@@ -64,6 +63,7 @@ static bool parse_detector(json_object *det_obj, detector_t *const det_ptr)
     {
         if (det_obj == NULL || det_ptr == NULL)
         {
+            fprintf(stderr, "Assertion error in parse_detector\n");
             break;
         }
 
@@ -88,12 +88,15 @@ static bool parse_detector(json_object *det_obj, detector_t *const det_ptr)
         {
             det_ptr->distance = json_object_get_int(temp_obj);
 
-            if (det_ptr->distance < MIN_DETECTOR_DISTANCE)
+            if (det_ptr->distance < MIN_DETECTOR_DISTANCE ||
+                det_ptr->distance > MAX_DETECTOR_DISTANCE)
             {
                 fprintf(stderr,
-                        "Invalid setback detector distance, "
-                        "must be at least %u feet\n",
-                        MIN_DETECTOR_DISTANCE);
+                        "Invalid setback detector distance %u, "
+                        "must be within %u to %u feet\n",
+                        det_ptr->distance,
+                        MIN_DETECTOR_DISTANCE,
+                        MAX_DETECTOR_DISTANCE);
                 break;
             }
         }
@@ -113,6 +116,7 @@ static bool parse_lane_group(json_object *lane_obj, lane_group_t *const lane_ptr
     {
         if (lane_obj == NULL || lane_ptr == NULL)
         {
+            fprintf(stderr, "Assertion error in parse_lane_group\n");
             break;
         }
 
@@ -130,8 +134,9 @@ static bool parse_lane_group(json_object *lane_obj, lane_group_t *const lane_ptr
         if (lane_ptr->count < 1 || lane_ptr->count > MAX_LANES)
         {
             fprintf(stderr,
-                    "Invalid lane count, must be a number between 1 and 3,"
+                    "Invalid lane count, must be a number between 1 and %u,"
                     "but got %u\n",
+                    MAX_LANES,
                     lane_ptr->count);
             break;
         }
@@ -151,6 +156,7 @@ static bool parse_lane_group(json_object *lane_obj, lane_group_t *const lane_ptr
             }
             else
             {
+                fprintf(stderr, "Failed to parse detector configuration\n");
                 break;
             }
         }
@@ -170,6 +176,7 @@ static bool parse_ped_crossing(json_object *ped_cross_obj, ped_crossing_t *const
     {
         if (ped_cross_obj == NULL || ped_cross_ptr == NULL)
         {
+            fprintf(stderr, "Assertion error in parse_ped_crossing\n");
             break;
         }
 
@@ -193,6 +200,18 @@ static bool parse_ped_crossing(json_object *ped_cross_obj, ped_crossing_t *const
 
         ped_cross_ptr->distance = json_object_get_int(temp_obj);
 
+        if (ped_cross_ptr->distance < MIN_CROSSING_DISTANCE ||
+            ped_cross_ptr->distance > MAX_CROSSING_DISTANCE)
+        {
+            fprintf(stderr,
+                    "Invalid pedestrian crossing distance %u, "
+                    "must be within %u to %u feet\n",
+                    ped_cross_ptr->distance,
+                    MIN_CROSSING_DISTANCE,
+                    MAX_CROSSING_DISTANCE);
+            break;
+        }
+
         result = true;
 
     } while (0);
@@ -208,12 +227,13 @@ static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr)
     {
         if (dir_obj == NULL || dir_ptr == NULL)
         {
+            fprintf(stderr, "Assertion error in parse_direction\n");
             break;
         }
 
         json_object *temp_obj;
 
-        // Parse direction type
+        // Parse direction type (required)
         if (!json_object_object_get_ex(dir_obj, "type", &temp_obj))
         {
             fprintf(stderr, "Missing direction type\n");
@@ -227,7 +247,7 @@ static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr)
             break;
         }
 
-        // Parse lanes
+        // Parse lanes (required)
         if (!json_object_object_get_ex(dir_obj, "lanes", &temp_obj))
         {
             fprintf(stderr, "Missing lanes\n");
@@ -272,7 +292,7 @@ static bool parse_direction(json_object *dir_obj, direction_t *const dir_ptr)
             }
         }
 
-        // Parse optional pedestrian crossing
+        // Parse pedestrian crossing (optional)
         if (json_object_object_get_ex(dir_obj, "pedestrian", &temp_obj))
         {
             if (parse_ped_crossing(temp_obj, &dir_ptr->ped))
@@ -301,6 +321,7 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
     {
         if (road_obj == NULL || road_ptr == NULL)
         {
+            fprintf(stderr, "Assertion error in parse_road\n");
             break;
         }
 
@@ -330,14 +351,27 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
             road_ptr->speed_limit = json_object_get_int(temp_obj);
         }
 
+        if (road_ptr->speed_limit < MIN_SPEED_LIMIT ||
+            road_ptr->speed_limit > MAX_SPEED_LIMIT)
+        {
+            fprintf(stderr,
+                    "Invalid speed limit %u, "
+                    "must be within %u to %u mph\n",
+                    road_ptr->speed_limit,
+                    MIN_SPEED_LIMIT,
+                    MAX_SPEED_LIMIT);
+            break;
+        }
+
         // Parse directions array (required)
         if (!json_object_object_get_ex(road_obj, "directions", &temp_obj) ||
             json_object_array_length(temp_obj) != MAX_DIRECTIONS)
         {
+            fprintf(stderr, "Missing or invalid directions array\n");
             break;
         }
 
-        // Parse each direction
+        // Parse each direction (required)
         size_t i;
         for (i = 0; i < MAX_DIRECTIONS; i++)
         {
@@ -349,6 +383,7 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
 
         if (i != MAX_DIRECTIONS)
         {
+            fprintf(stderr, "Failed to parse direction %lu\n", i);
             break;
         }
 
@@ -461,6 +496,8 @@ static bool str_to_detector_type(
         det_types_size);
 }
 
+/*Interface Functions*/
+
 bool load_config(config_t *config, const char *filename)
 {
     bool status = false;
@@ -470,6 +507,7 @@ bool load_config(config_t *config, const char *filename)
     {
         if (config == NULL || filename == NULL)
         {
+            fprintf(stderr, "Assertion error in load_config\n");
             break;
         }
 
@@ -548,6 +586,7 @@ bool load_config(config_t *config, const char *filename)
 
         if (i != MAX_ROADS)
         {
+            fprintf(stderr, "Failed to parse road %lu\n", i);
             break;
         }
 

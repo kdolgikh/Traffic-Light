@@ -25,7 +25,8 @@
         "distance": {
           "type": "integer",
           "minimum": 80,
-          "description": "Distance from stop line in feet, min 80ft for 30mph"
+          "maximum": 485,
+          "description": "Distance from stop line in feet, min 80ft for 30mph, max 485ft for 60mph"
         }
       }
     },
@@ -194,7 +195,8 @@
                     },
                     "distance": {
                       "type": "integer",
-                      "minimum": 0,
+                      "minimum": 12,
+                      "maximum": 120,
                       "description": "Crossing distance in feet"
                     }
                   }
