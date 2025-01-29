@@ -616,9 +616,9 @@ static bool validate_detector_config(
 
                 // TODO: Add more checks for other detector types if necessary
             }
-            else if (det_ptr->distance > 0)
+            else
             {
-                fprintf(stderr, "Main road cannot have a setback detector on a turn lane\n");
+                fprintf(stderr, "Main road cannot have a detector on a turn lane\n");
                 break;
             }
         }
