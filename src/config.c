@@ -654,6 +654,7 @@ static bool str_to_detector_type(
 // - Add validation of pedestrian crossing (time vs distance)
 // - Add validation of protected left turn lanes
 // - Add validation of timing params (main vs side road)
+// - Add intersection type specific validations into respective type implementations
 
 static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left)
 {
@@ -777,9 +778,9 @@ static bool validate_detector_config(
 
                 // Add more checks for other detector types if necessary
             }
-            else
+            else if (det_ptr->distance > 0)
             {
-                fprintf(stderr, "Main road cannot have a detector on a turn lane\n");
+                fprintf(stderr, "Main road cannot have a setback detector on a turn lane\n");
                 break;
             }
         }
