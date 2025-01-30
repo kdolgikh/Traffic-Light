@@ -119,11 +119,6 @@
           "minimum": 8,
           "description": "Minimum green time in seconds"
         },
-        "max_green": {
-          "type": "number",
-          "minimum": 15,
-          "description": "Maximum green time in seconds"
-        },
         "pedestrian_walk": {
           "type": "number",
           "minimum": 4,

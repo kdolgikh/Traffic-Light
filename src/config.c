@@ -31,6 +31,14 @@
 #define MAX_SPEED_LIMIT 60U         // Maximum speed limit mph
 #define MIN_SETBACK_SPEED_LIMIT 40U // Minimum speed limit for setback detectors
 
+#define MIN_YELLOW_TIME 3.0f   // Minimum yellow clearance time
+#define MAX_YELLOW_TIME 6.0f   // Maximum yellow clearance time
+#define MIN_RED_CLEARANCE 1.5f // Minimum red clearance time
+#define MAX_RED_CLEARANCE 3.0f // Maximum red clearance time
+#define MIN_GREEN_STOP_LINE 8U // For side road/left turns with stop line detection
+#define MIN_GREEN_SETBACK 15U  // For main road with setback detection (≥40 mph)
+#define MIN_PED_WALK_TIME 4U   // Minimum walk time with push buttons
+
 typedef struct
 {
     direction_type_t dir1;
@@ -406,6 +414,109 @@ static bool parse_road(json_object *road_obj, road_t *const road_ptr)
             break;
         }
 
+        json_object *timing_obj;
+
+        // Parse timing configuration (required)
+        if (!json_object_object_get_ex(road_obj, "timing", &timing_obj))
+        {
+            fprintf(stderr, "Missing timing configuration\n");
+            break;
+        }
+
+        // Parse yellow clearance time (required)
+        if (!json_object_object_get_ex(timing_obj, "yellow_time", &temp_obj))
+        {
+            fprintf(stderr, "Missing yellow clearance time\n");
+            break;
+        }
+
+        road_ptr->timing.yellow_time = json_object_get_double(temp_obj);
+
+        if (road_ptr->timing.yellow_time < MIN_YELLOW_TIME ||
+            road_ptr->timing.yellow_time > MAX_YELLOW_TIME)
+        {
+            fprintf(stderr,
+                    "Invalid yellow clearance time %.1f, "
+                    "must be between %f and %f seconds\n",
+                    road_ptr->timing.yellow_time,
+                    MIN_YELLOW_TIME,
+                    MAX_YELLOW_TIME);
+            break;
+        }
+
+        // Parse red clearance time (required)
+        if (!json_object_object_get_ex(timing_obj, "red_clearance", &temp_obj))
+        {
+            fprintf(stderr, "Missing red clearance time\n");
+            break;
+        }
+
+        road_ptr->timing.red_clearance = json_object_get_double(temp_obj);
+
+        if (road_ptr->timing.red_clearance < MIN_RED_CLEARANCE ||
+            road_ptr->timing.red_clearance > MAX_RED_CLEARANCE)
+        {
+            fprintf(stderr,
+                    "Invalid red clearance time %.1f, "
+                    "must be between %f and %f seconds\n",
+                    road_ptr->timing.red_clearance,
+                    MIN_RED_CLEARANCE,
+                    MAX_RED_CLEARANCE);
+            break;
+        }
+
+        // Parse minimum green time (required)
+        if (!json_object_object_get_ex(timing_obj, "min_green", &temp_obj))
+        {
+            fprintf(stderr, "Missing minimum green time\n");
+            break;
+        }
+
+        road_ptr->timing.min_green = json_object_get_int(temp_obj);
+
+        if (road_ptr->timing.min_green < MIN_GREEN_STOP_LINE)
+        {
+            fprintf(stderr,
+                    "Invalid minimum green time %u, "
+                    "must be at least %u seconds\n",
+                    road_ptr->timing.min_green,
+                    MIN_GREEN_STOP_LINE);
+            break;
+        }
+
+        // Parse pedestrian walk time (optional)
+        if (json_object_object_get_ex(timing_obj, "pedestrian_walk", &temp_obj))
+        {
+            road_ptr->timing.ped_walk = json_object_get_int(temp_obj);
+
+            if (road_ptr->timing.ped_walk < MIN_PED_WALK_TIME)
+            {
+                fprintf(stderr,
+                        "Invalid pedestrian walk time %u, "
+                        "must be at least %u seconds\n",
+                        road_ptr->timing.ped_walk,
+                        MIN_PED_WALK_TIME);
+                break;
+            }
+        }
+
+        // Parse pedestrian clearance time (optional)
+        if (json_object_object_get_ex(
+                timing_obj, "pedestrian_clearance", &temp_obj))
+        {
+            road_ptr->timing.ped_clearance = json_object_get_int(temp_obj);
+
+            if (road_ptr->timing.ped_clearance < MIN_PED_WALK_TIME)
+            {
+                fprintf(stderr,
+                        "Invalid pedestrian clearance time %u, "
+                        "must be at least %u seconds\n",
+                        road_ptr->timing.ped_clearance,
+                        MIN_PED_WALK_TIME);
+                break;
+            }
+        }
+
         // Parse directions array (required)
         if (!json_object_object_get_ex(road_obj, "directions", &temp_obj) ||
             json_object_array_length(temp_obj) != MAX_DIRECTIONS)
@@ -542,6 +653,7 @@ static bool str_to_detector_type(
 // TODO:
 // - Add validation of pedestrian crossing (time vs distance)
 // - Add validation of protected left turn lanes
+// - Add validation of timing params (main vs side road)
 
 static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left)
 {
@@ -912,6 +1024,13 @@ bool config_load(config_t *config, const char *filename)
         if (main_road_id != NULL && config->main_road == NULL)
         {
             fprintf(stderr, "No matching entry for the main road found\n");
+            break;
+        }
+
+        // Parse timing parameters (required)
+        if (!json_object_object_get_ex(root, "timing", &temp_obj))
+        {
+            fprintf(stderr, "Missing timing parameters\n");
             break;
         }
 
