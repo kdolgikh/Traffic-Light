@@ -98,8 +98,7 @@
       "required": [
         "yellow_time",
         "red_clearance",
-        "min_green",
-        "max_green"
+        "min_green"
       ],
       "properties": {
         "yellow_time": {

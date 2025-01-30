@@ -42,7 +42,14 @@
             "distance": 40
           }
         }
-      ]
+      ],
+      "timing": {
+        "yellow_time": 4.0,
+        "red_clearance": 2.0,
+        "min_green": 15,
+        "pedestrian_walk": 6,
+        "pedestrian_clearance": 5
+      }
     },
     {
       "id": "road2",
@@ -71,7 +78,14 @@
             }
           }
         }
-      ]
+      ],
+      "timing": {
+        "yellow_time": 3.5,
+        "red_clearance": 1.8,
+        "min_green": 10,
+        "pedestrian_walk": 5,
+        "pedestrian_clearance": 4
+      }
     }
   ]
 }
