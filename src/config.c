@@ -22,6 +22,15 @@
     MAX(STRLEN(DIR_TYPE_NB), STRLEN(DIR_TYPE_SB)), \
     MAX(STRLEN(DIR_TYPE_EB), STRLEN(DIR_TYPE_WB)))
 
+#define MAX_LANES 3U                // Maximum lanes per direction
+#define MIN_DETECTOR_DISTANCE 80U   // Minimum distance for setback detectors
+#define MAX_DETECTOR_DISTANCE 485U  // Maximum distance for setback detectors
+#define MIN_CROSSING_DISTANCE 12U   // Minimum distance for pedestrian crossings
+#define MAX_CROSSING_DISTANCE 120U  // Maximum distance for pedestrian crossings
+#define MIN_SPEED_LIMIT 20U         // Minimum speed limit mph
+#define MAX_SPEED_LIMIT 60U         // Maximum speed limit mph
+#define MIN_SETBACK_SPEED_LIMIT 40U // Minimum speed limit for setback detectors
+
 typedef struct
 {
     direction_type_t dir1;
@@ -531,8 +540,8 @@ static bool str_to_detector_type(
 /* Config Validation */
 
 // TODO:
-// - Add validation of pedestrian crossing time vs distance
-// - Add validation of protected phase for left turn lanes
+// - Add validation of pedestrian crossing (time vs distance)
+// - Add validation of protected left turn lanes
 
 static bool is_turn_lane_allowed(const intersection_type_t type, const bool is_left)
 {
@@ -702,6 +711,15 @@ static bool validate_direction_config(
                 fprintf(stderr, "Invalid straight lane detector configuration\n");
                 break;
             }
+        }
+        else if (is_main_road || speed_limit >= MIN_SETBACK_SPEED_LIMIT)
+        {
+            fprintf(
+                stderr,
+                "Setback detector must be present on a main road"
+                " or for speed limits at or above %u\n",
+                MIN_SETBACK_SPEED_LIMIT);
+            break;
         }
 
         if (dir_ptr->has_left)

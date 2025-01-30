@@ -7,13 +7,6 @@
 #define MAX_STR_LEN 64U
 #define MAX_ROADS 2U               // Exactly 2 intersecting roads
 #define MAX_DIRECTIONS 2U          // Each road has exactly 2 directions
-#define MAX_LANES 3U               // Maximum lanes per direction
-#define MIN_DETECTOR_DISTANCE 80U  // Minimum distance for setback detectors
-#define MAX_DETECTOR_DISTANCE 485U // Maximum distance for setback detectors
-#define MIN_CROSSING_DISTANCE 12U  // Minimum distance for pedestrian crossings
-#define MAX_CROSSING_DISTANCE 120U // Maximum distance for pedestrian crossings
-#define MIN_SPEED_LIMIT 20U        // Minimum speed limit mph
-#define MAX_SPEED_LIMIT 60U        // Maximum speed limit mph
 
 typedef enum
 {
