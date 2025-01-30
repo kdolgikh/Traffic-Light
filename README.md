@@ -69,10 +69,10 @@ Traffic controller state machine
 
 ### Signal timings
 
-- Yellow clearance: 3-6 seconds (minimum 3)
-- Red clearance: 1.5-3 seconds (minimum 1.5)
+- Yellow clearance: 3-6 seconds
+- Red clearance: 1.5-3 seconds
 - Minimum green time:
-  - 8 seconds for side street/left turns with stop bar detection
+  - 8 seconds for side street/left turns with stop line detection
   - 12-15 seconds for main street with setback detection
 - Maximum green time:
   - Greater of:
@@ -91,10 +91,10 @@ Traffic controller state machine
 
 ## Implementation Notes
 
-- The design defines a pattern for the controller implementation based on the requirements outlined below, while leaving most features unimplemented, with only one or two provided as examples.
+- The design defines a pattern for the controller implementation based on the requirements outlined above, while leaving most features unimplemented, with only one or two provided as examples.
 - JSON is chosen for the controller configuration due to the following advantages:
   - It supports a schema-based configuration pattern, providing guidance for config creators.
-  - It enables validation against the schema using online or external tools without executing it on the controller.
+  - It enables validation against the schema using online or other tools without executing it on the controller.
   - It facilitates complex configurations, including conditional requirements, while minimizing data repetition.
   - In the future, once a stable JSON Schema validator written in C/C++ becomes available, the custom validation can be replaced with it.
 
