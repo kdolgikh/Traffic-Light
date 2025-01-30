@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 #define MAX_STR_LEN 64U
-#define MAX_ROADS 2U               // Exactly 2 intersecting roads
-#define MAX_DIRECTIONS 2U          // Each road has exactly 2 directions
+#define MAX_ROADS 2U      // Exactly 2 intersecting roads
+#define MAX_DIRECTIONS 2U // Each road has exactly 2 directions
 
 typedef enum
 {
@@ -73,9 +73,20 @@ typedef struct
 
 typedef struct
 {
+    float yellow_time;      // Yellow clearance interval
+    float red_clearance;    // All-red clearance interval
+    uint8_t min_green;      // Minimum green time
+    uint8_t max_green;      // Maximum green time
+    uint8_t ped_walk;       // Walk signal duration
+    uint8_t ped_clearance;  // Pedestrian clearance time
+} phase_timing_t;
+
+typedef struct
+{
     ASSET_ID;
     uint8_t speed_limit;
     direction_t directions[MAX_DIRECTIONS];
+    phase_timing_t timing;
 } road_t;
 
 typedef struct

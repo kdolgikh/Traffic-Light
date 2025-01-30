@@ -92,6 +92,49 @@
           }
         }
       ]
+    },
+    "timing": {
+      "type": "object",
+      "required": [
+        "yellow_time",
+        "red_clearance",
+        "min_green",
+        "max_green"
+      ],
+      "properties": {
+        "yellow_time": {
+          "type": "number",
+          "minimum": 3,
+          "maximum": 6,
+          "description": "Yellow light duration in seconds"
+        },
+        "red_clearance": {
+          "type": "number",
+          "minimum": 1.5,
+          "maximum": 3,
+          "description": "All-red clearance interval in seconds"
+        },
+        "min_green": {
+          "type": "number",
+          "minimum": 8,
+          "description": "Minimum green time in seconds"
+        },
+        "max_green": {
+          "type": "number",
+          "minimum": 15,
+          "description": "Maximum green time in seconds"
+        },
+        "pedestrian_walk": {
+          "type": "number",
+          "minimum": 4,
+          "description": "Walk signal duration in seconds"
+        },
+        "pedestrian_clearance": {
+          "type": "number",
+          "minimum": 4,
+          "description": "Pedestrian clearance (flashing don't walk) time in seconds"
+        }
+      }
     }
   },
   "required": [
@@ -128,7 +171,8 @@
           "id",
           "name",
           "speed_limit",
-          "directions"
+          "directions",
+          "timing"
         ],
         "properties": {
           "id": {
@@ -204,43 +248,9 @@
                 }
               }
             }
-          }
-        }
-      },
-      "timing": {
-        "type": "object",
-        "properties": {
-          "yellow_time": {
-            "type": "number",
-            "minimum": 3,
-            "maximum": 6,
-            "description": "Yellow light duration in seconds"
           },
-          "red_clearance": {
-            "type": "number",
-            "minimum": 1.5,
-            "maximum": 3,
-            "description": "All-red clearance interval in seconds"
-          },
-          "min_green": {
-            "type": "number",
-            "minimum": 8,
-            "description": "Minimum green time in seconds"
-          },
-          "max_green": {
-            "type": "number",
-            "minimum": 15,
-            "description": "Maximum green time in seconds"
-          },
-          "pedestrian_walk": {
-            "type": "number",
-            "minimum": 4,
-            "description": "Walk signal duration in seconds"
-          },
-          "pedestrian_clearance": {
-            "type": "number",
-            "minimum": 4,
-            "description": "Pedestrian clearance (flashing don't walk) time in seconds"
+          "timing": {
+            "$ref": "#/definitions/timing"
           }
         }
       }
