@@ -37,14 +37,15 @@ typedef struct
     uint32_t phase_timer; // Time in current phase
 } controller_state_t;
 
-typedef struct
+typedef struct controller controller_t;
+struct controller
 {
     const config_t *config;
     controller_state_t state;
-} controller_t;
+    bool (*init)(controller_t *const controller);
+    void (*run)(controller_t *const controller);
+};
 
-bool controller_init(
-    controller_t *const controller, const config_t *const config);
-void controller_run(controller_t *const controller);
+bool controller_init(controller_t *const controller);
 
 #endif // CONTROLLER_H

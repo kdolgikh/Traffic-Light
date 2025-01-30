@@ -7,7 +7,6 @@
 #include <stdbool.h>
 
 static volatile bool running = true;
-static controller_t controller;
 
 static void signal_handler(int signum)
 {
@@ -44,7 +43,11 @@ int main(int argc, char *argv[])
     }
 
     // Initialize controller
-    if (!controller_init(&controller, &config))
+    static controller_t controller;
+    memset(&controller, 0, sizeof(controller));
+    controller.config = &config;
+
+    if (!controller_init(&controller))
     {
         fprintf(stderr, "Failed to initialize controller\n");
         return EXIT_FAILURE;
@@ -54,7 +57,7 @@ int main(int argc, char *argv[])
     printf("Started traffic light controller. Press Ctrl+C to exit.\n");
     while (running)
     {
-        controller_run(&controller);
+        controller.run(&controller);
     }
 
     return EXIT_SUCCESS;
