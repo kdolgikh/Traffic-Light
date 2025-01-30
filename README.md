@@ -4,90 +4,66 @@ Traffic controller state machine
 
 ## TODO
 
+- [ ] Change schema to match the exact type of intersection
+  - [ ] Discuss possible ways to expand this schema for other types or use different schemas for different types
+- [ ] Based on type, choose config parser code
 - [ ] Add missing config parameters:
   - [ ] Non-lock memory operation
   - [ ] Lock memory operation
   - [ ] Presence mode operation
 - [ ] TODOs in code
 
-## Design Requirements
+## Design Specifications
+
+Specifications follow SC DOT design guidelines.
 
 ### Intersections
 
 - Exactly two roads per intersection
-- Intersections involving one-way streets are not considered
-- Intersections have unique IDs to enable potential identification when connected in a network
+- Intersection has a unique ID and type
+- Intersection type defines its configuration and operation
+- Roads in an intersection have unique names
+- No pedestrian crossings
+- One road is designated as a main road, another a side road
 
 ### Roads
 
-- Roads have unique IDs, while names may be duplicated
-- One road may be designated as main road
 - Each road has exactly 2 directions (opposing traffic)
 - Speed limits: 20-60 mph
-- The speed limit remains the same in both directions.
+- The speed limit remains the same in both directions
+- Grades are not accounted for (grade 0)
 
 ### Lanes
 
-- Maximum 3 lanes per direction
-- Types of lanes:
-  - Straight (through) lanes: Required
-  - Left turn lanes: Optional
-  - Right turn lanes: Optional
-- Left turn phases require:
-  - Dedicated left turn lane
-  - Protected/permissive or protected-only operation
-  - Protected-only required for dual left turns
+- Two straight lanes for through and right turn movements on main road
+- One straight lane on side road
+- No separate signal for right turn lanes
+- A single left turn lane in each direction operating in permitted mode
+
+### Phasing
+
+- Four phases (2,4,6,8)
+- Main road phases 2 and 6
+- No overlap, concurrent, or split phases
 
 ### Detection
 
 - Stop line detection:
-  - Required for side street approaches
-  - Required for left turn lanes
-  - Non-lock memory operation
-  - Presence mode operation
+  - Required for side road approaches
+    - Non-lock memory operation
+  - Not required for main road approaches
 - Setback detection:
-  - Required for main street through movements
-  - Required for speeds ≥ 40 mph
-  - Distance from stop line based on speed:
-    - 30 mph: 80 ft
-    - 35 mph: 200 ft
-    - 40 mph: 300 ft
-    - 45 mph: 330 ft
-    - 50 mph: 370 ft
-    - 55 mph: 445 ft
-    - 60 mph: 485 ft
-  - Lock memory operation
-  - Presence mode operation
-
-### Pedestrian crossing
-
-- Optional on any approach
-- When present requires:
-  - Push buttons
-  - Minimum walk time: 4 seconds with push buttons
-  - Don't Walk time: Based on 3.5 ft/sec walking speed
+  - Not required for main road through movements
 
 ### Signal timings
 
 - Yellow clearance: 3-6 seconds
 - Red clearance: 1.5-3 seconds
 - Minimum green time:
-  - 8 seconds for side street/left turns with stop line detection
-  - 12-15 seconds for main street with setback detection
+  - 8 seconds for side road
+  - Green rest
 - Maximum green time:
-  - Greater of:
-    - Sum of Walk + Don't Walk times
-    - Sum of Time Before Reduce + Time to Reduce + 15 seconds
-  - Typically 40-60 seconds
-
-### Phasing
-
-- Through movements: Even phase numbers (2,4,6,8)
-- Left turn movements: Odd phase numbers (1,3,5,7)
-- Main street typically phases 2 and 6
-- Phase 2 used for eastbound or southbound
-- Phases numbered clockwise around intersection
-- Concurrent pedestrian movements with parallel vehicle phase
+  - TBD
 
 ## Implementation Notes
 
